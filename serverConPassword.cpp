@@ -118,6 +118,25 @@ private:
         std::cout << "New connection accepted" << std::endl;
     }
 
+    std::string extractPassword(std::string strRaw)
+    {
+        std::string pass = "PASS";
+        size_t position = strRaw.find(pass);
+
+        if (position == std::string::npos)
+            return ("");
+
+        position += pass.size();
+
+        size_t start_word = strRaw.find_first_not_of(" \t\n", position);
+        size_t end_word = strRaw.find_first_of(" \t\n", start_word);
+
+        if (start_word != std::string::npos && end_word != std::string::npos)
+            return (strRaw.substr(start_word, end_word - start_word));
+
+        return ("");
+    }
+
     void handle_client_message(int client_socket) {
         char buffer[BUFFER_SIZE];
         int bytes_read = read(client_socket, buffer, sizeof(buffer) - 1);
@@ -140,18 +159,28 @@ private:
         std::cout << "MENSAJE RECIBIDO DEL CLIENTE" << std::endl;
         std::cout << message << std::endl;
 
-        if (message.substr(0, 5) == "PASS ")
+        if (message.find("PASS") != std::string::npos)
         {
-            std::string userPass;
-            userPass = message.substr(5);
-            std::cout << "LA CONTRASEÑA ES -> " << userPass << std::endl;
-            std::cout << "LA LONGITUD DE LA CONTRASEÑA ES -> " << userPass.size() << std::endl;
-            userPass = userPass.substr(0, userPass.size() - 2);
-            std::cout << "CONTRASEÑA FINAL -> " << userPass << std::endl;
-            if (userPass == this->password)
-                std::cout << "CONTRASEÑA OK" << std::endl;
-            else   
-                std::cout << "CONTRASEÑA ERRONEA" << std::endl;
+            std::string userPass = extractPassword(message);
+            if (userPass != "")
+            {
+                userPass = userPass.substr(0, userPass.size() - 1);
+                if (userPass == this->password)
+                    std::cout << "CONTRASEÑA OK" << std::endl;
+                else
+                {
+                    std::cout << "CONTRASEÑA ERRONEA" << std::endl;
+                    close(client_socket);
+                    remove_client(client_socket);
+                    return;
+                }
+            }
+            else
+            {
+                close(client_socket);
+                remove_client(client_socket);
+                return;
+            }  
         }
 
 
